@@ -39,6 +39,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_hal.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -102,6 +103,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART3_UART_Init();
+  MX_TIM4_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -112,15 +114,26 @@ int main(void)
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, RESET);
 
   HAL_UART_Receive_IT(&huart3, &rx3_data, 1);
+
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint8_t a = 0;
-  float f = 1.234;
+  uint16_t ccr = 0;
+
   while (1)
   {
-
+    //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, ccr);
+    TIM4->CCR1 = ccr;
+    ccr += 1000;
+    if(ccr > TIM4->ARR)
+    {
+      ccr = 0;
+    }
+    HAL_Delay(50);
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -196,6 +209,9 @@ static void MX_NVIC_Init(void)
   /* USART3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(USART3_IRQn);
+  /* EXTI0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -205,6 +221,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   {
     HAL_UART_Receive_IT(&huart3, &rx3_data, 1);
     HAL_UART_Transmit(&huart3, &rx3_data, 1, 10);
+  }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if(htim->Instance == TIM7)
+  {
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+  }
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if(GPIO_Pin == GPIO_PIN_0)
+  {
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
   }
 }
 /* USER CODE END 4 */
